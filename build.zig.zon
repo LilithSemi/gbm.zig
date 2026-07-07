@@ -1,11 +1,17 @@
 .{
-  .name = "gbm.zig",
-  .version = "0.1.0",
-  .paths = .{"."},
-  .dependencies = .{
-    .libdrm = .{
-      .url = "https://github.com/MidstallSoftware/libdrm.zig/archive/c7461292dd9657d6b903cefe3cab8726f629fce6.tar.gz",
-      .hash = "1220a4a92c6b34b498eb6fc59d7219ea766af83175c3325850222af3cbd6915435df",
+    .name = .gbm,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.16.0",
+    .fingerprint = 0xd6111077e2525907,
+    .dependencies = .{
+        .drm = .{
+            .url = "git+https://github.com/Midstall/drm.zig#cd18f8cc3805f7b61c8022fd03cd6d38d047bb01",
+            .hash = "drm-0.1.0-ObSCT_bnAAC2OdJL9MpKcsRziVnHMJtS5Dcv3TXyz9hD",
+        },
+        .nvidia = .{
+            .url = "git+https://github.com/Midstall/nvidia.zig#f81790928048dda590c864112a3400e0e356de49",
+            .hash = "nvidia-0.1.0-nX_091g3CAChxx1IuLAam8nsRH6cQ7uYOP6pajCediLF",
+        },
     },
-  },
+    .paths = .{ "build.zig", "build.zig.zon", "src" },
 }
