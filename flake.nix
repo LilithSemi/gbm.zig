@@ -77,7 +77,7 @@
 
             zigDeps = pkgs.zig.fetchDeps {
               inherit (finalAttrs) src pname version;
-              hash = "sha256-OWYapX13cZPkRUUgEHOIqoi3OT4ALHJvy8jgTOtuD6c=";
+              hash = "sha256-peleDRTk+d5d70s6ozRbYj8NELF/SUZTbrf3WGY7BMU=";
             };
 
             nativeBuildInputs = with pkgs; [
