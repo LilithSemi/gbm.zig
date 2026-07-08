@@ -3,11 +3,14 @@ const buf_mod = @import("buffer.zig");
 const device_mod = @import("device.zig");
 const backend = @import("backend.zig");
 
-/// Surface is a double-buffered swapchain-like object analogous to gbm_surface.
-/// It maintains a front buffer (displayed/consumed) and a back buffer (rendered into).
-/// Caller creates the surface, calls nextBuffer to get the back buffer to render into,
-/// then presents (swaps) by calling lockFrontBuffer. releaseBuffer gives the buffer
-/// back to the Surface so it can be reused.
+/// Surface is a double-buffered swapchain analogous to gbm_surface. It keeps a
+/// front buffer (displayed) and a back buffer (rendered into).
+///
+/// Posting and locking are split like real libgbm + EGL. nextBuffer hands the
+/// renderer the back buffer to draw into. swapBuffers posts it so back becomes
+/// front (eglSwapBuffers). lockFrontBuffer takes the posted front out for
+/// scanout. releaseBuffer returns it after the flip for reuse. The renderer
+/// (EGL) and the presenter (a KMS compositor) each drive their own step.
 pub const Surface = struct {
     device: *device_mod.Device,
     desc: buf_mod.BufferDesc,
@@ -42,13 +45,20 @@ pub const Surface = struct {
         return self.back.?;
     }
 
-    /// Swap back->front. Returns the front buffer (ready to be displayed/exported).
-    /// Caller must call releaseBuffer when done with it.
-    /// The returned buffer is removed from Surface ownership until releaseBuffer is called.
-    pub fn lockFrontBuffer(self: *Surface) ?*buf_mod.BufferObject {
+    /// Post the rendered back buffer: back becomes the new front, and the old
+    /// front becomes the back (available to render into next). The front stays in
+    /// the Surface for the presenter to lockFrontBuffer. The renderer calls this
+    /// from eglSwapBuffers.
+    pub fn swapBuffers(self: *Surface) void {
         const old_front = self.front;
         self.front = self.back;
         self.back = old_front;
+    }
+
+    /// Take the posted front buffer out for display/scanout, or null if nothing
+    /// was posted since the last lock. The presenter calls this after swapBuffers,
+    /// then releaseBuffer once the flip is done. Does not swap.
+    pub fn lockFrontBuffer(self: *Surface) ?*buf_mod.BufferObject {
         const locked = self.front;
         self.front = null;
         return locked;
@@ -98,7 +108,7 @@ test "Surface: nextBuffer creates back buffer" {
     try std.testing.expectEqual(@as(u32, 100), back.height);
 }
 
-test "Surface: lockFrontBuffer swaps buffers" {
+test "Surface: swapBuffers posts, lockFrontBuffer hands off, releaseBuffer recycles" {
     var mb = @import("backend.zig").MemoryBackend.init(std.testing.allocator);
     defer mb.deinit();
     var dev = device_mod.Device.init(mb.allocator());
@@ -112,20 +122,25 @@ test "Surface: lockFrontBuffer swaps buffers" {
     });
     defer surf.deinit();
 
-    // Get back buffer and write a sentinel
+    // Nothing posted yet: locking returns null.
+    try std.testing.expectEqual(@as(?*buf_mod.BufferObject, null), surf.lockFrontBuffer());
+
+    // Render into the back buffer and post it.
     const back = try surf.nextBuffer();
     back.map()[0] = 0xAB;
     back.unmap();
+    surf.swapBuffers();
 
-    // Lock front (swap): front is now the buffer we rendered into
+    // Lock the posted front (no second post): it is the buffer we rendered into.
     const front = surf.lockFrontBuffer().?;
     try std.testing.expectEqual(@as(u8, 0xAB), front.map()[0]);
     front.unmap();
 
-    // Release front -> becomes new back
-    surf.releaseBuffer(front);
+    // A second lock without a new post returns null (the front was taken).
+    try std.testing.expectEqual(@as(?*buf_mod.BufferObject, null), surf.lockFrontBuffer());
 
-    // Get next back buffer (should be the old front)
+    // Release the front so it recycles as the new back.
+    surf.releaseBuffer(front);
     const back2 = try surf.nextBuffer();
     try std.testing.expectEqual(@as(u8, 0xAB), back2.map()[0]);
     back2.unmap();

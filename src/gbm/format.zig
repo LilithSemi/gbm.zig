@@ -42,8 +42,8 @@ pub const DRM_FORMAT_MOD_VENDOR_ARM: u8 = 0x08;
 pub const DRM_FORMAT_MOD_VENDOR_ALLWINNER: u8 = 0x09;
 pub const DRM_FORMAT_MOD_VENDOR_AMLOGIC: u8 = 0x0a;
 
-/// Extract the vendor nibble from a DRM format modifier.
-/// The modifier is 56 bits; the top 8 bits encode the vendor.
+/// Extract the vendor field from a DRM format modifier.
+/// The top 8 bits of the modifier encode the vendor.
 pub fn modifierVendor(mod: u64) u8 {
     return @intCast((mod >> 56) & 0xff);
 }

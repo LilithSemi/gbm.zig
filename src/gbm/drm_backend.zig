@@ -1,9 +1,6 @@
-//! DRM-backed GBM allocator: allocates real DRM dumb buffers through a DRM node
-//! (analogous to libgbm's DRM device), built on the drm subproject. Zero C deps.
-//!
-//! This is the second gbm backend alongside MemoryBackend; both implement the
-//! same backend.Allocator vtable, so a Device works with either. Buffers carry
-//! the GEM handle; this backend does not CPU-map them (data is empty).
+//! DRM-backed GBM allocator: allocates real DRM dumb buffers through a DRM node,
+//! built on the drm subproject. Implements the same backend.Allocator vtable as
+//! MemoryBackend. Buffers carry the GEM handle and are not CPU-mapped.
 
 const std = @import("std");
 const drm = @import("drm");

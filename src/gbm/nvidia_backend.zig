@@ -1,11 +1,6 @@
 //! NVIDIA-RM-backed GBM allocator: allocates device VRAM via the NVIDIA open
 //! kernel module (subproject/nvidia) and CPU-maps it, so buffers are real GPU
-//! memory you can upload pixels into. Zero C deps.
-//!
-//! Third gbm backend alongside MemoryBackend and DrmBackend, same Allocator
-//! vtable. NOTE: the RM keeps one mmap context per fd, so this backend maps all
-//! buffers through the device node and supports one active CPU mapping at a
-//! time; a fuller impl would open a dedicated fd per buffer.
+//! memory you can upload pixels into. Same Allocator vtable as MemoryBackend.
 
 const std = @import("std");
 const nvidia = @import("nvidia");

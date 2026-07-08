@@ -5,8 +5,8 @@
     .fingerprint = 0xd6111077e2525907,
     .dependencies = .{
         .drm = .{
-            .url = "git+https://github.com/Midstall/drm.zig#cd18f8cc3805f7b61c8022fd03cd6d38d047bb01",
-            .hash = "drm-0.1.0-ObSCT_bnAAC2OdJL9MpKcsRziVnHMJtS5Dcv3TXyz9hD",
+            .url = "git+https://github.com/Midstall/drm.zig#63dea957b1e483c20ab179dbd254d23cd5193b98",
+            .hash = "drm-0.1.0-ObSCTyAwAQCoO5M4wEfyqsa04ybZdydIbZ6rGvLsaua-",
         },
         .nvidia = .{
             .url = "git+https://github.com/Midstall/nvidia.zig#f81790928048dda590c864112a3400e0e356de49",
