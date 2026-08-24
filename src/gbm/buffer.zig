@@ -1,5 +1,16 @@
 const std = @import("std");
 const fmt_mod = @import("format.zig");
+const backend = @import("backend.zig");
+
+pub const DmabufExport = struct {
+    fd: std.posix.fd_t,
+    width: u32,
+    height: u32,
+    format: u32,
+    stride: u32,
+    offset: u32,
+    modifier: u64,
+};
 
 pub const STRIDE_ALIGNMENT: usize = 256;
 
@@ -57,6 +68,8 @@ pub const BufferObject = struct {
     handle: u32 = 0,
     /// Byte offset of plane 0 within `data`. For single-plane formats always 0.
     offset: u32 = 0,
+    /// Back-reference to the owning allocator (null for stack-allocated test BOs).
+    allocator: ?backend.Allocator = null,
 
     pub fn map(self: *BufferObject) []u8 {
         return self.data;
@@ -79,6 +92,13 @@ pub const BufferObject = struct {
     /// Opaque handle for plane `plane` (same as .handle for single-plane).
     pub fn getPlaneHandle(self: *const BufferObject, plane: u8) u32 {
         return if (plane == 0) self.handle else 0;
+    }
+
+    /// Export this buffer as a dma-buf fd. The fd is owned by the caller (caller closes it).
+    /// Returns error.Unsupported if the backend does not support dmabuf export.
+    pub fn exportFd(self: *BufferObject) backend.Error!DmabufExport {
+        const alloc = self.allocator orelse return backend.Error.Unsupported;
+        return alloc.exportFd(self);
     }
 
     /// Build an export descriptor from this BufferObject.

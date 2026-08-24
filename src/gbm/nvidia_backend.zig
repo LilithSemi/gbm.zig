@@ -1,6 +1,8 @@
-//! NVIDIA-RM-backed GBM allocator: allocates device VRAM via the NVIDIA open
-//! kernel module (subproject/nvidia) and CPU-maps it, so buffers are real GPU
-//! memory you can upload pixels into. Same Allocator vtable as MemoryBackend.
+//! NVIDIA-RM-backed GBM allocator: allocates system (host) memory via the NVIDIA
+//! open kernel module (subproject/nvidia) and CPU-maps it. System memory is
+//! required for dma-buf export via nvidia-drm GEM_IMPORT_USERSPACE_MEMORY
+//! (get_user_pages cannot pin VRAM BAR mappings). Same Allocator vtable as
+//! MemoryBackend.
 
 const std = @import("std");
 const nvidia = @import("nvidia");
@@ -18,6 +20,7 @@ pub const NvidiaBackend = struct {
     const vtable = backend.VTable{
         .allocate = nvAllocate,
         .free = nvFree,
+        .exportFd = nvExportFd,
     };
 
     /// Open the RM and bring up GPU 0. Returns error.NoDevice when no NVIDIA GPU
@@ -48,7 +51,7 @@ pub const NvidiaBackend = struct {
         const stride = buf_mod.computeStride(desc.width, bpp);
         const size = buf_mod.computeSize(stride, desc.height);
 
-        const mem = self.client.allocMemory(self.device, .vram, size) catch return backend.Error.OutOfMemory;
+        const mem = self.client.allocMemory(self.device, .system, size) catch return backend.Error.OutOfMemory;
         errdefer self.client.freeMemory(self.device, mem);
         const map = self.client.mapMemory(self.device, mem) catch return backend.Error.OutOfMemory;
 
@@ -69,8 +72,9 @@ pub const NvidiaBackend = struct {
             .modifier = fmt_mod.DRM_FORMAT_MOD_LINEAR,
             .stride = @intCast(stride),
             .size = size,
-            .data = map.bytes, // CPU-mapped VRAM
+            .data = map.bytes, // CPU-mapped system memory
             .handle = mem.handle,
+            .allocator = self.allocator(),
         };
         return bo;
     }
@@ -79,8 +83,27 @@ pub const NvidiaBackend = struct {
         const self: *NvidiaBackend = @ptrCast(@alignCast(ptr));
         // Release the bo's CPU mapping (closing its fd), then the memory object.
         if (self.mappings.fetchRemove(bo)) |kv| self.client.unmapMemory(kv.value);
-        self.client.freeMemory(self.device, .{ .handle = bo.handle, .size = bo.size, .location = .vram });
+        self.client.freeMemory(self.device, .{ .handle = bo.handle, .size = bo.size, .location = .system });
         self.gpa.destroy(bo);
+    }
+
+    fn nvExportFd(ptr: *anyopaque, bo: *buf_mod.BufferObject) backend.Error!buf_mod.DmabufExport {
+        const self: *NvidiaBackend = @ptrCast(@alignCast(ptr));
+        const map = self.mappings.get(bo) orelse return backend.Error.ExportFailed;
+        const va: usize = @intFromPtr(map.bytes.ptr);
+        // Use map.bytes.len (the RM-allocated size, page-rounded) not bo.size (the
+        // usable pixel footprint). GEM_IMPORT_USERSPACE_MEMORY requires the EXACT
+        // size passed to the mmap that produced this VA, which is mem.size from RM.
+        const fd = nvidia.memToDmaBuf(va, map.bytes.len) catch return backend.Error.ExportFailed;
+        return buf_mod.DmabufExport{
+            .fd = fd,
+            .width = bo.width,
+            .height = bo.height,
+            .format = bo.format,
+            .stride = bo.stride,
+            .offset = bo.offset,
+            .modifier = fmt_mod.DRM_FORMAT_MOD_LINEAR,
+        };
     }
 };
 
@@ -110,4 +133,42 @@ test "live: NVIDIA backend allocates + maps a GPU buffer" {
     bo.data[bo.size - 1] = 0x99;
     try std.testing.expectEqual(@as(u8, 0x42), bo.data[0]);
     try std.testing.expectEqual(@as(u8, 0x99), bo.data[bo.size - 1]);
+}
+
+test "live: NVIDIA backend exportFd yields a real dma-buf" {
+    const device = @import("device.zig");
+    var be = NvidiaBackend.open(std.testing.allocator) catch return error.SkipZigTest;
+    defer be.deinit();
+    var dev = device.Device.init(be.allocator());
+
+    const bo = dev.create(.{
+        .width = 64,
+        .height = 64,
+        .format = fmt_mod.DRM_FORMAT_XRGB8888,
+        .usage = .{ .rendering = true },
+    }) catch |e| switch (e) {
+        backend.Error.OutOfMemory => return error.SkipZigTest,
+        else => return e,
+    };
+    defer dev.destroy(bo);
+
+    const exp = bo.exportFd() catch |e| switch (e) {
+        backend.Error.ExportFailed => {
+            std.debug.print("exportFd returned ExportFailed (nvidia-drm unavailable?)\n", .{});
+            return error.SkipZigTest;
+        },
+        else => return e,
+    };
+    try std.testing.expect(exp.fd >= 0);
+
+    // Verify the fd is a real dma-buf (readlink target must contain "dmabuf").
+    var path_buf: [64]u8 = undefined;
+    const link_path = std.fmt.bufPrintZ(&path_buf, "/proc/self/fd/{d}", .{exp.fd}) catch unreachable;
+    var target_buf: [256]u8 = undefined;
+    const link_len = std.os.linux.readlink(link_path.ptr, &target_buf, target_buf.len);
+    _ = std.os.linux.close(exp.fd);
+    try std.testing.expect(@as(isize, @bitCast(link_len)) > 0);
+    const target = target_buf[0..link_len];
+    std.debug.print("\n[gbm dmabuf] readlink(/proc/self/fd/{d}) = {s}\n", .{ exp.fd, target });
+    try std.testing.expect(std.mem.indexOf(u8, target, "dmabuf") != null);
 }

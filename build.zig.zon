@@ -4,13 +4,13 @@
     .minimum_zig_version = "0.16.0",
     .fingerprint = 0xd6111077e2525907,
     .dependencies = .{
-        .drm = .{
-            .url = "git+https://github.com/Midstall/drm.zig#197beb1a71876473c436b613ba9b2aac972b8675",
-            .hash = "drm-0.1.0-ObSCT54wAQAIqad-yynaTqZnuq1hxNByQjSkkB0Y4spt",
-        },
         .nvidia = .{
-            .url = "git+https://github.com/Midstall/nvidia.zig#f81790928048dda590c864112a3400e0e356de49",
-            .hash = "nvidia-0.1.0-nX_091g3CAChxx1IuLAam8nsRH6cQ7uYOP6pajCediLF",
+            .url = "git+https://github.com/Midstall/nvidia.zig#4d0078259dcf6770433e3b42603736b3b70b1006",
+            .hash = "nvidia-0.1.0-nX_09wxuCAAqlGIxDi4j9Z4dNIJzD6AimJvGbaEKyzB-",
+        },
+        .drm = .{
+            .url = "git+https://github.com/Midstall/drm.zig#25adace9df06b8b859ee52cc0832bcc4c2223c3a",
+            .hash = "drm-0.1.0-ObSCTywHAQAeCZ7R4ZAVRLD63FEkmWIQfOhnfwQwoiBF",
         },
     },
     .paths = .{ "build.zig", "build.zig.zon", "src" },

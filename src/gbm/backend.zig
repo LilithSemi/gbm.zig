@@ -2,11 +2,12 @@ const std = @import("std");
 const fmt_mod = @import("format.zig");
 const buf_mod = @import("buffer.zig");
 
-pub const Error = error{ OutOfMemory, Unsupported, InvalidArgument };
+pub const Error = error{ OutOfMemory, Unsupported, InvalidArgument, ExportFailed };
 
 pub const VTable = struct {
     allocate: *const fn (ptr: *anyopaque, desc: buf_mod.BufferDesc) Error!*buf_mod.BufferObject,
     free: *const fn (ptr: *anyopaque, bo: *buf_mod.BufferObject) void,
+    exportFd: *const fn (ptr: *anyopaque, bo: *buf_mod.BufferObject) Error!buf_mod.DmabufExport,
 };
 
 pub const Allocator = struct {
@@ -20,6 +21,10 @@ pub const Allocator = struct {
     pub fn free(self: Allocator, bo: *buf_mod.BufferObject) void {
         self.vtable.free(self.ptr, bo);
     }
+
+    pub fn exportFd(self: Allocator, bo: *buf_mod.BufferObject) Error!buf_mod.DmabufExport {
+        return self.vtable.exportFd(self.ptr, bo);
+    }
 };
 
 pub const MemoryBackend = struct {
@@ -28,6 +33,7 @@ pub const MemoryBackend = struct {
     const vtable = VTable{
         .allocate = memAllocate,
         .free = memFree,
+        .exportFd = memExportFd,
     };
 
     pub fn init(gpa: std.mem.Allocator) MemoryBackend {
@@ -66,6 +72,7 @@ pub const MemoryBackend = struct {
             .stride = stride,
             .size = size,
             .data = data,
+            .allocator = Allocator{ .ptr = ptr, .vtable = &vtable },
         };
         return bo;
     }
@@ -74,6 +81,10 @@ pub const MemoryBackend = struct {
         const self: *MemoryBackend = @ptrCast(@alignCast(ptr));
         self.gpa.free(bo.data);
         self.gpa.destroy(bo);
+    }
+
+    fn memExportFd(_: *anyopaque, _: *buf_mod.BufferObject) Error!buf_mod.DmabufExport {
+        return Error.Unsupported;
     }
 };
 
@@ -144,4 +155,20 @@ test "MemoryBackend: zero dimension returns error" {
     };
     const result = alloc.allocate(desc);
     try std.testing.expectError(Error.InvalidArgument, result);
+}
+
+test "MemoryBackend: exportFd returns Unsupported" {
+    var mb = MemoryBackend.init(std.testing.allocator);
+    defer mb.deinit();
+    const alloc = mb.allocator();
+
+    const bo = try alloc.allocate(.{
+        .width = 64,
+        .height = 64,
+        .format = fmt_mod.DRM_FORMAT_XRGB8888,
+        .usage = .{},
+    });
+    defer alloc.free(bo);
+
+    try std.testing.expectError(error.Unsupported, bo.exportFd());
 }
