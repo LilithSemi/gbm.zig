@@ -5,11 +5,11 @@
     .fingerprint = 0xd6111077e2525907,
     .dependencies = .{
         .nvidia = .{
-            .url = "git+https://github.com/Midstall/nvidia.zig#4d0078259dcf6770433e3b42603736b3b70b1006",
-            .hash = "nvidia-0.1.0-nX_09wxuCAAqlGIxDi4j9Z4dNIJzD6AimJvGbaEKyzB-",
+            .url = "git+https://git.lilithsemi.com/LilithSemi/nvidia.zig#55e802c62444eccf8f2919d4b13463e375ae88fe",
+            .hash = "nvidia-0.1.0-nX_09yBuCAAha5yRD62mzBoqRsuQ70hBECJYMieHCn9A",
         },
         .drm = .{
-            .url = "git+https://github.com/Midstall/drm.zig#25adace9df06b8b859ee52cc0832bcc4c2223c3a",
+            .url = "git+https://git.lilithsemi.com/LilithSemi/drm.zig#25adace9df06b8b859ee52cc0832bcc4c2223c3a",
             .hash = "drm-0.1.0-ObSCTywHAQAeCZ7R4ZAVRLD63FEkmWIQfOhnfwQwoiBF",
         },
     },
