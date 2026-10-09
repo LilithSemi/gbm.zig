@@ -164,7 +164,7 @@ test "BufferObject: map returns data slice" {
 }
 
 test "BufferObject: getPlaneStride/Offset/Handle plane 0" {
-    var backing = [_]u8{0} ** 256;
+    var backing: [256]u8 = @splat(0);
     const bo = BufferObject{
         .width = 64,
         .height = 1,
@@ -181,7 +181,7 @@ test "BufferObject: getPlaneStride/Offset/Handle plane 0" {
 }
 
 test "BufferObject: getPlaneStride/Offset/Handle plane 1 returns zeros (packed format)" {
-    var backing = [_]u8{0} ** 256;
+    var backing: [256]u8 = @splat(0);
     const bo = BufferObject{
         .width = 64,
         .height = 1,
@@ -198,7 +198,7 @@ test "BufferObject: getPlaneStride/Offset/Handle plane 1 returns zeros (packed f
 }
 
 test "BufferObject: exportDesc round-trip" {
-    var backing = [_]u8{0} ** 512;
+    var backing: [512]u8 = @splat(0);
     const bo = BufferObject{
         .width = 128,
         .height = 1,

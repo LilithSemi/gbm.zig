@@ -1,16 +1,16 @@
 .{
     .name = .gbm,
     .version = "0.1.0",
-    .minimum_zig_version = "0.16.0",
+    .minimum_zig_version = "0.17.0",
     .fingerprint = 0xd6111077e2525907,
     .dependencies = .{
         .nvidia = .{
-            .url = "git+https://git.lilithsemi.com/LilithSemi/nvidia.zig#c278df01ad3dcf3568a2ed530719eb7b8ac178de",
-            .hash = "nvidia-0.1.0-nX_095kyCwArp7mMdvRev_44U2oXxZXf7y8Q66L6PdhZ",
+            .url = "git+https://git.lilithsemi.com/LilithSemi/nvidia.zig#c8cb9f94fd8a3ce2b1added981bc1aff33be4f64",
+            .hash = "nvidia-0.1.0-nX_09_EODACTjQ0rgOrWL9kkUs2WJhusYQOo4DaJc-N7",
         },
         .drm = .{
-            .url = "git+https://git.lilithsemi.com/LilithSemi/drm.zig#25adace9df06b8b859ee52cc0832bcc4c2223c3a",
-            .hash = "drm-0.1.0-ObSCTywHAQAeCZ7R4ZAVRLD63FEkmWIQfOhnfwQwoiBF",
+            .url = "git+https://git.lilithsemi.com/LilithSemi/drm.zig#2052f9db78f1ceddc7fd378aaf464467adcd3ee8",
+            .hash = "drm-0.1.0-ObSCT5MIAQDFo1jPV8V9pDsBZtveE6ZB1OOxy7ehbr_J",
         },
     },
     .paths = .{ "build.zig", "build.zig.zon", "src" },

@@ -163,12 +163,14 @@ test "live: NVIDIA backend exportFd yields a real dma-buf" {
 
     // Verify the fd is a real dma-buf (readlink target must contain "dmabuf").
     var path_buf: [64]u8 = undefined;
-    const link_path = std.fmt.bufPrintZ(&path_buf, "/proc/self/fd/{d}", .{exp.fd}) catch unreachable;
+    const link_path = std.mem.printSentinel(&path_buf, "/proc/self/fd/{d}", .{exp.fd}, 0) catch unreachable;
+
     var target_buf: [256]u8 = undefined;
     const link_len = std.os.linux.readlink(link_path.ptr, &target_buf, target_buf.len);
     _ = std.os.linux.close(exp.fd);
+
     try std.testing.expect(@as(isize, @bitCast(link_len)) > 0);
+
     const target = target_buf[0..link_len];
-    std.debug.print("\n[gbm dmabuf] readlink(/proc/self/fd/{d}) = {s}\n", .{ exp.fd, target });
     try std.testing.expect(std.mem.indexOf(u8, target, "dmabuf") != null);
 }
